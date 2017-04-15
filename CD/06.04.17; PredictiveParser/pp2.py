@@ -2,7 +2,6 @@ import copy
 from stack import MyStack
 
 LLstack = MyStack()
-
 ############################################################################
 # productions = ['S->ABCDE', 'A->a|e', 'B->b|e', 'C->c', 'D->d|e', 'E->f|e']
 # productions = ['S->ABC', 'A->C|b', 'B->c|Sd', 'C->f']
@@ -20,7 +19,8 @@ LLstack = MyStack()
 # productions = ['S->A|a', 'A->a']
 # productions = ['S->aB|e', 'B->bC|e', 'C->cS|e']
 # productions = ['S->AB', 'A->a|e', 'B->b|e']
-productions = ['S->F|(S+F)', 'F->a']
+# productions = ['S->F|(S+F)', 'F->a']
+productions = ['S->AA', 'A->aA|b']
 ############################################################################
 
 # declarations
@@ -36,6 +36,17 @@ parsing_table = {}
 variables = [chr(a) for a in range(65, 91)] # stores all variables
 terminals = [chr(a) for a in range(97, 123)] # store all terminals
 terminals.extend(['(', ')', '*', '+'])
+
+
+def isLL1():
+	for key, value in parsing_table.iteritems():
+		for k, v in value.iteritems():
+			if len(v)>1:
+				print '\ngrammar is not LL(1)'
+				return False
+	print '\ngrammar is LL(1)'
+	return True
+
 
 def print_stuff():
 	print '\n---productions---'
@@ -54,13 +65,6 @@ def print_stuff():
 	print '\n---parsing_table---'
 	for key in all_variables:
 		print key, ':', parsing_table[key]
-	
-	for key, value in parsing_table.iteritems():
-		for k, v in value.iteritems():
-			if len(v)>1:
-				print '\ngrammar is not LL(1)'
-				return
-	print '\ngrammar is LL(1)'
 
 
 def initialise_dictionaries():
@@ -198,12 +202,17 @@ def create_parsing_table():
 		for j, rule in enumerate(sub_rules):
 			for k, r in enumerate(rule):
 				if r in terminals: 
+					"""
+					parsing_table[variable][r].append(variable+'->'+rule)
+					break
+					"""					
 					if r != 'e':
 						parsing_table[variable][r].append(variable+'->'+rule)
 						break
 					elif r == 'e':
 						for m, ch in enumerate(follow[variable]):
 							parsing_table[variable][ch].append(variable+'->e')
+					
 				elif r in all_variables:
 					if 'e' not in first[r]:
 						for ch in first[r]:
@@ -221,8 +230,43 @@ def create_parsing_table():
 	
 
 def predictive_parser():
-	global string
-
+	if not isLL1():
+		return
+	start = productions[0][0]
+	LLstack.push('$')
+	LLstack.push(start)
+	string = raw_input('enter string: ')
+	string += '$'
+	print string
+	LLstack.show()
+	ll_counter = 0
+	while True:
+		if LLstack.top() in all_variables:
+			# print 'inside 1..'
+			LLstack.show()
+			temp = parsing_table[LLstack.top()][string[ll_counter]][0][3:]
+			# print '->>', LLstack.top(), string[ll_counter]
+			# print temp
+			LLstack.pop()
+			for j, ch in enumerate(reversed(temp)):
+				if ch != 'e':
+					LLstack.push(ch)
+			# LLstack.show()
+			# print all_terminals
+			# print terminals
+		elif LLstack.top() in all_terminals:
+			# print 'inside 2..'
+			if LLstack.top() == string[ll_counter]:
+				LLstack.pop()
+				ll_counter += 1
+			# LLstack.show()
+		LLstack.show()
+		if string[ll_counter] == '$' or LLstack.top() == '$':
+		 	if LLstack.top() == '$' and string[ll_counter] == '$':
+				print 'string accepted!!'
+			else:
+				print 'string invalid!!'
+			break
 
 
 initialise_dictionaries()
@@ -230,4 +274,4 @@ find_first(all_variables)
 find_follow(all_variables)
 create_parsing_table()
 print_stuff()
-string = raw_input('enter string: ')
+predictive_parser()
