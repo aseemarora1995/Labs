@@ -4,9 +4,12 @@ from stack import MyStack
 LLstack = MyStack()
 ############################################################################
 # productions = ['S->ABCDE', 'A->a|e', 'B->b|e', 'C->c', 'D->d|e', 'E->f|e']
+productions = ['S->C', 'C->S|a|e']
+# productions = ['E->E+T|T', 'T->T*F|F', 'F->i|(E)'] # not LL(1)
 # productions = ['S->ABC', 'A->C|b', 'B->c|Sd', 'C->f']
 # productions = ['S->ABC|d', 'A->a|e|B', 'B->b|e', 'C->c']
 # productions = ['S->Bb|Cd', 'B->aB|e', 'C->cC|e']
+# productions = ['S->aAcBe', 'A->Ab|b', 'B->d']
 # productions = ['S->ACB|CbB|Ba', 'A->da|BC', 'B->g|e', 'C->h|e']
 # productions = ['S->aABb', 'A->c|e', 'B->d|e']
 # productions = ['S->aBDh', 'B->cC', 'C->bC|e', 'D->EF', 'E->g|e', 'F->f|e']
@@ -20,7 +23,10 @@ LLstack = MyStack()
 # productions = ['S->aB|e', 'B->bC|e', 'C->cS|e']
 # productions = ['S->AB', 'A->a|e', 'B->b|e']
 # productions = ['S->F|(S+F)', 'F->a']
-productions = ['S->AA', 'A->aA|b']
+# productions = ['S->AA', 'A->aA|b']
+# productions = ['S->aAS|c', 'A->ba|SB', 'B->bA|S']
+# productions = ['S->aAS|e', 'A->ba|SB', 'B->cA|S'] # not LL(1)
+## productions = ['S->aAS|c', 'A->ba|SB', 'B->bA|S']
 ############################################################################
 
 # declarations
@@ -47,7 +53,7 @@ def isLL1():
 	print '\ngrammar is LL(1)'
 	return True
 
-
+ 
 def print_stuff():
 	print '\n---productions---'
 	for p in productions:
@@ -97,9 +103,14 @@ def initialise_dictionaries():
 	# print parsing_table
 
 
-def remove_duplicates(temp):
-	for key, values in temp.iteritems():
-		temp[key] = list(set(values))
+def remove_duplicates(temp, pt=None):
+	if pt == 1:
+		for key, value in temp.iteritems():
+			for t in all_terminals:
+				value[t] = list(set(value[t]))
+	else:
+		for key, values in temp.iteritems():
+			temp[key] = list(set(values))
 
 
 def compare_dictionaries(flag):
@@ -222,10 +233,17 @@ def create_parsing_table():
 						for ch in first[r]:
 							if ch != 'e':
 								parsing_table[variable][ch].append(variable+'->'+rule)
+							#####
+							'''
+							elif ch == 'e':
+								for m, ch1 in enumerate(follow[variable]):
+									parsing_table[variable][ch1].append(variable+'->'+rule)
+							'''
+							#####
 						if k == len(rule)-1:
 							for ch in follow[variable]:
 								parsing_table[variable][ch].append(variable+'->'+rule)
-
+	remove_duplicates(parsing_table, 1)						
 	# check if grammar is LL(1) or not.
 	
 
@@ -238,12 +256,17 @@ def predictive_parser():
 	string = raw_input('enter string: ')
 	string += '$'
 	print string
-	LLstack.show()
+	# LLstack.show()
 	ll_counter = 0
 	while True:
+		'''
+		if string[ll_counter] not in all_terminals:
+			print 'string invalid!!'
+			break
+		'''
 		if LLstack.top() in all_variables:
 			# print 'inside 1..'
-			LLstack.show()
+			# LLstack.show()
 			temp = parsing_table[LLstack.top()][string[ll_counter]][0][3:]
 			# print '->>', LLstack.top(), string[ll_counter]
 			# print temp
@@ -260,7 +283,7 @@ def predictive_parser():
 				LLstack.pop()
 				ll_counter += 1
 			# LLstack.show()
-		LLstack.show()
+		# LLstack.show()
 		if string[ll_counter] == '$' or LLstack.top() == '$':
 		 	if LLstack.top() == '$' and string[ll_counter] == '$':
 				print 'string accepted!!'
@@ -269,9 +292,14 @@ def predictive_parser():
 			break
 
 
-initialise_dictionaries()
-find_first(all_variables)	
-find_follow(all_variables)
-create_parsing_table()
-print_stuff()
-predictive_parser()
+def main():
+	initialise_dictionaries()
+	find_first(all_variables)	
+	find_follow(all_variables)
+	create_parsing_table()
+	print_stuff()
+	predictive_parser()
+
+
+if __name__ == "__main__":
+	main()
