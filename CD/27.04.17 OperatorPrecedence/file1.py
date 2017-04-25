@@ -1,11 +1,14 @@
 
-
 import copy
 import pandas as pd
+from stack import MyStack
 
 # productions = ['S->A', 'A->T|A+T|A-T', 'T->F|T*F|T/F', 'F->P|P^F', 'P->i|n|(A)']
-productions = ['E->E+E|E*E|i']
+# productions = ['E->E+E|E*E|i'] # invalid
+# productions = ['P->SbP|SbS|S' ,'S->WbS|W', 'W->L*W|L', 'L->i']
+productions = ['E->E+T|T', 'T->T*F|F', 'F->(E)|i']
 
+OPPStack = MyStack()
 variables_used, terminals_used = [], ['$']
 rules, first, last, temp_first, temp_last = {}, {}, {}, {}, {}
 op_prec_table = {}
@@ -135,15 +138,12 @@ def find_last():
 
 
 def op_precedence_table():
-	print terminals_used, variables_used
 	# terminal immediately precedes non_terminal => terminal < first[non_terminal]
 	for key, value in rules.iteritems():
-		print key, value
 		for i, v in enumerate(value):
 			if i == len(value)-1:
 				continue
 			elif value[i] in terminals_used and value[i+1] in variables_used:
-				print '-->>', value[i], value[i+1]
 				for ch in first[value[i+1]]:
 					op_prec_table[v][ch].append('<')
 
@@ -156,15 +156,69 @@ def op_precedence_table():
 				for ch in last[value[i]]:
 					op_prec_table[ch][value[i+1]].append('>')
 
+
 	# $
+	'''
+	for ch in terminals_used:
+		if ch == '$':
+			continue
+		op_prec_table['$'][ch].append('<')
+		op_prec_table[ch]['$'].append('>')
+	'''
+	
 	start = productions[0][0]
 	for ch in first[start]:
 		op_prec_table['$'][ch].append('<')
 	for ch in last[start]:
 		op_prec_table[ch]['$'].append('>')
-
+	
 	# aBc => a = c
-	pass
+	for key, value in rules.iteritems():
+		for i in range(len(value)-2):
+			if value[i] in terminals_used and value[i+1] in variables_used and value[i+2] in terminals_used:
+				print value[i], '<==>', value[i+2]
+				op_prec_table[value[i]][value[i+2]].append('=')
+
+
+	'''
+	for key, value in rules.iteritems():
+		values = value.split('|')
+		for v in values:
+			if len(v) == 3:
+				if v[0] in terminals_used and v[1] in variables_used and v[2]\
+				in terminals_used:
+
+					op_prec_table[v[0]][v[2]].append('=')
+	'''
+
+
+def op_precedence_parser():
+	string = raw_input('enter string: ')
+	string += '$'
+	OPPStack.push('$')
+	opp_counter = 0
+
+	while True:
+		a, b = OPPStack.top(), string[opp_counter]
+		# print '->>', 'a:', a, ' b:', b
+		if a == '$' and b == '$':
+			print 'string valid!'
+			break
+		else:
+			if op_prec_table[a][b] == ['<'] or op_prec_table[a][b] == ['=']:
+				OPPStack.push(b)
+				opp_counter += 1
+			elif op_prec_table[a][b] == ['>']:
+				while True:
+					c = OPPStack.top()
+					OPPStack.pop()
+					if op_prec_table[OPPStack.top()][c] == ['<']:
+						break
+			else:
+				print 'blank entry found! string invalid'
+				break
+			OPPStack.show()
+			
 
 def main():
 	initialisations()
@@ -172,7 +226,7 @@ def main():
 	find_last()
 	op_precedence_table()
 	print_stuff()
-
+	op_precedence_parser()
 
 if __name__ == "__main__":
 	main()
